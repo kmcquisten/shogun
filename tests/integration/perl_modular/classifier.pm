@@ -146,10 +146,15 @@ sub _evaluate {
     } else {
 	$classifier=$fun->new($indata->{$prefix.'C'}, $machine);
     }
-    if($classifier->get_name()  eq  'LibLinear'){
-	print ($classifier->get_name(), " - yes");
+    if($classifier->get_name() eq 'LibLinear'){
+	print ($classifier->get_name(), " - yes\n");
 	$classifier->set_liblinear_solver_type($modshogun::L2R_LR);
     }
+    my $sgio =  $classifier->get_global_io();
+    $sgio->enable_progress();
+    $sgio->set_loglevel($modshogun::MSG_GCDEBUG);
+    $sgio->set_loglevel($modshogun::MSG_INFO);
+
     $classifier->{parallel} = modshogun::Parallel->new();
     $classifier->{parallel}->set_num_threads($indata->{$prefix.'num_threads'});
     #PTZ121009 threads are not working..it crashes in Perl_IO_stdin...
@@ -157,15 +162,15 @@ sub _evaluate {
     #$classifier->{parallel}->set_num_threads(1);
     if($@) {
 	warn($@);
-	#return false;
+	return 0;
     }
 
     if($ctype eq 'linear'){
 	if(defined($indata->{$prefix.'bias'})){
-	    $classifier->set_bias_enabled(true);
+	    $classifier->set_bias_enabled(1);
 	}
     }else{
-	$classifier->set_bias_enabled(false);
+	$classifier->set_bias_enabled(0);
     }	
     if( $ctype eq 'perceptron'){
 	$classifier->set_learn_rate=$indata->{$prefix.'learn_rate'};
@@ -175,12 +180,12 @@ sub _evaluate {
 	eval { $classifier->set_epsilon($indata->{$prefix.'epsilon'}); };
 	if($@) {
 #Can't locate object method "set_epsilon" via package "modshogun::SVMSGD" at classifier.pm line 167.
-	    warn(Dumper($classifier));
+	    warn($@, Dumper($classifier));
 	    #return false;
 	}
     }
     if(defined($indata->{$prefix.'max_train_time'})){
-	$classifier->set_max_train_time($indata->{$prefix.'max_train_time'});
+	$classifier->set_max_train_time($indata->{$prefix.'max_train_time'} * 1000);
     }
     if(defined($indata->{$prefix.'linadd_enabled'})){
 	$classifier->set_linadd_enabled($indata->{$prefix.'linadd_enabled'});
@@ -190,7 +195,7 @@ sub _evaluate {
     }
     $classifier->train();
 
-    my $res= &_get_results($indata, $prefix, $classifier, $machine, $feats);
+    my $res = &_get_results($indata, $prefix, $classifier, $machine, $feats);
     return &util::check_accuracy
 	($res->{'accuracy'},
 	 {alphas=>$res->{'alphas'}, bias=>$res->{'bias'}, sv=>$res->{'sv'},

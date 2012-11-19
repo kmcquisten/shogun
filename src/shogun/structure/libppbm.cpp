@@ -11,10 +11,6 @@
  * Implementation of the Proximal Point P-BMRM
  *--------------------------------------------------------------------- */
 
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-
 #include <shogun/structure/libp3bm.h>
 #include <shogun/lib/external/libqp.h>
 #include <shogun/lib/Time.h>
@@ -201,19 +197,19 @@ bmrm_return_value_T svm_ppbm_solver(
 	sq_norm_W=0.0;
 	sq_norm_Wdiff=0.0;
 
+	b[0] = SGVector<float64_t>::dot(subgrad, W, nDim);
+	sq_norm_W = SGVector<float64_t>::dot(W, W, nDim);
 	for (uint32_t j=0; j<nDim; ++j)
 	{
-		b[0]+=subgrad[j]*W[j];
-		sq_norm_W+=W[j]*W[j];
 		sq_norm_Wdiff+=(W[j]-prevW[j])*(W[j]-prevW[j]);
 	}
 
 	ppbmrm.Fp=R+0.5*_lambda*sq_norm_W + alpha*sq_norm_Wdiff;
 	ppbmrm.Fd=-LIBBMRM_PLUS_INF;
 	lastFp=ppbmrm.Fp;
-	wdist=::sqrt(sq_norm_Wdiff);
+	wdist=CMath::sqrt(sq_norm_Wdiff);
 
-	K = (sq_norm_W == 0.0) ? 0.4 : 0.01*::sqrt(sq_norm_W);
+	K = (sq_norm_W == 0.0) ? 0.4 : 0.01*CMath::sqrt(sq_norm_W);
 
 	LIBBMRM_MEMCPY(prevW, W, nDim*sizeof(float64_t));
 
@@ -248,28 +244,16 @@ bmrm_return_value_T svm_ppbm_solver(
 			{
 				A_1=get_cutting_plane(cp_ptr);
 				cp_ptr=cp_ptr->next;
-				rsum=0.0;
+				rsum=SGVector<float64_t>::dot(A_1, A_2, nDim);
 
-				for (uint32_t j=0; j<nDim; ++j)
-				{
-					rsum+=A_1[j]*A_2[j];
-				}
-
-				H[LIBBMRM_INDEX(i, ppbmrm.nCP, BufSize)]=rsum;
-			}
-
-			for (uint32_t i=0; i<ppbmrm.nCP; ++i)
-			{
-				H[LIBBMRM_INDEX(ppbmrm.nCP, i, BufSize)]=
-					H[LIBBMRM_INDEX(i, ppbmrm.nCP, BufSize)];
+				H[LIBBMRM_INDEX(ppbmrm.nCP, i, BufSize)]
+					= H[LIBBMRM_INDEX(i, ppbmrm.nCP, BufSize)]
+					= rsum;
 			}
 		}
 
-		rsum=0.0;
 		A_2=get_cutting_plane(CPList_tail);
-
-		for (uint32_t i=0; i<nDim; ++i)
-			rsum+=A_2[i]*A_2[i];
+		rsum = SGVector<float64_t>::dot(A_2, A_2, nDim);
 
 		H[LIBBMRM_INDEX(ppbmrm.nCP, ppbmrm.nCP, BufSize)]=rsum;
 
@@ -301,12 +285,10 @@ bmrm_return_value_T svm_ppbm_solver(
 
 			for (uint32_t i=0; i<ppbmrm.nCP; ++i)
 			{
-				rsum=0.0;
 				A_1=get_cutting_plane(cp_ptr);
 				cp_ptr=cp_ptr->next;
 
-				for (uint32_t j=0; j<nDim; ++j)
-					rsum+=A_1[j]*prevW[j];
+				rsum = SGVector<float64_t>::dot(A_1, prevW, nDim);
 
 				b2[i]=b[i]-((2*alpha)/(_lambda+2*alpha))*rsum;
 				diag_H2[i]=diag_H[i]/(_lambda+2*alpha);
@@ -344,7 +326,7 @@ bmrm_return_value_T svm_ppbm_solver(
 			for (uint32_t i=0; i<nDim; ++i)
 				sq_norm_Wdiff+=(wt[i]-prevW[i])*(wt[i]-prevW[i]);
 
-			if (::sqrt(sq_norm_Wdiff) <= K)
+			if (CMath::sqrt(sq_norm_Wdiff) <= K)
 			{
 				flag=false;
 
@@ -372,8 +354,7 @@ bmrm_return_value_T svm_ppbm_solver(
 					A_1=get_cutting_plane(cp_ptr);
 					cp_ptr=cp_ptr->next;
 
-					for (uint32_t j=0; j<nDim; ++j)
-						rsum+=A_1[j]*prevW[j];
+					rsum = SGVector<float64_t>::dot(A_1, prevW, nDim);
 
 					b2[i]=b[i]-((2*alpha)/(_lambda+2*alpha))*rsum;
 					diag_H2[i]=diag_H[i]/(_lambda+2*alpha);
@@ -408,7 +389,7 @@ bmrm_return_value_T svm_ppbm_solver(
 				for (uint32_t i=0; i<nDim; ++i)
 					sq_norm_Wdiff+=(wt[i]-prevW[i])*(wt[i]-prevW[i]);
 
-				if (::sqrt(sq_norm_Wdiff) > K)
+				if (CMath::sqrt(sq_norm_Wdiff) > K)
 				{
 					/* if there is a record of some good solution
 					 * (i.e. adjust alpha by division by 2) */
@@ -479,8 +460,7 @@ bmrm_return_value_T svm_ppbm_solver(
 				A_1=get_cutting_plane(cp_ptr);
 				cp_ptr=cp_ptr->next;
 
-				for (uint32_t j=0; j<nDim; ++j)
-					rsum+=A_1[j]*prevW[j];
+				rsum = SGVector<float64_t>::dot(A_1, prevW, nDim);
 
 				b2[i]=b[i]-((2*alpha)/(_lambda+2*alpha))*rsum;
 				diag_H2[i]=diag_H[i]/(_lambda+2*alpha);
@@ -532,20 +512,17 @@ bmrm_return_value_T svm_ppbm_solver(
 
 		/* risk and subgradient computation */
 		R = model->risk(subgrad, W);
-		b[ppbmrm.nCP]=-R;
 		add_cutting_plane(&CPList_tail, map, A,
 				find_free_idx(map, BufSize), subgrad, nDim);
 
-		sq_norm_W=0.0;
-		sq_norm_Wdiff=0.0;
-		sq_norm_prevW=0.0;
+		sq_norm_W=SGVector<float64_t>::dot(W, W, nDim);
+		sq_norm_prevW=SGVector<float64_t>::dot(prevW, prevW, nDim);
+		b[ppbmrm.nCP]=SGVector<float64_t>::dot(subgrad, W, nDim) - R;
 
+		sq_norm_Wdiff=0.0;
 		for (uint32_t j=0; j<nDim; ++j)
 		{
-			b[ppbmrm.nCP]+=subgrad[j]*W[j];
-			sq_norm_W+=W[j]*W[j];
 			sq_norm_Wdiff+=(W[j]-prevW[j])*(W[j]-prevW[j]);
-			sq_norm_prevW+=prevW[j]*prevW[j];
 		}
 
 		/* compute Fp and Fd */
@@ -591,7 +568,7 @@ bmrm_return_value_T svm_ppbm_solver(
 			sq_norm_Wdiff+=(W[i]-prevW[i])*(W[i]-prevW[i]);
 		}
 
-		wdist=::sqrt(sq_norm_Wdiff);
+		wdist=CMath::sqrt(sq_norm_Wdiff);
 
 		/* Keep history of Fp, Fd, wdist */
 		ppbmrm.hist_Fp[ppbmrm.nIter]=ppbmrm.Fp;

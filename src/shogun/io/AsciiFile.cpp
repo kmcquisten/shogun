@@ -65,13 +65,18 @@ void CAsciiFile::fname(sg_type*& vec, int32_t& len) \
 	}												\
 }
 
+GET_VECTOR(get_vector, get_int8_matrix, int8_t)
 GET_VECTOR(get_vector, get_matrix, uint8_t)
 GET_VECTOR(get_vector, get_matrix, char)
 GET_VECTOR(get_vector, get_matrix, int32_t)
+GET_VECTOR(get_vector, get_uint_matrix, uint32_t)
 GET_VECTOR(get_vector, get_matrix, float32_t)
 GET_VECTOR(get_vector, get_matrix, float64_t)
+GET_VECTOR(get_vector, get_longreal_matrix, floatmax_t)
 GET_VECTOR(get_vector, get_matrix, int16_t)
 GET_VECTOR(get_vector, get_matrix, uint16_t)
+GET_VECTOR(get_vector, get_long_matrix, int64_t)
+GET_VECTOR(get_vector, get_ulong_matrix, uint64_t)
 #undef GET_VECTOR
 
 #define GET_MATRIX(fname, conv, sg_type)										\
@@ -515,7 +520,6 @@ void CAsciiFile::get_string_list(SGString<uint8_t>*& strings, int32_t& num_str, 
 					int32_t len=i-old_sz;
 					max_string_len=CMath::max(max_string_len, len+overflow_len);
 
-					new (&strings[lines]) SGString<uint8_t>();
 					strings[lines].slen=len+overflow_len;
 					strings[lines].string=SG_MALLOC(uint8_t, len+overflow_len);
 
@@ -609,7 +613,6 @@ void CAsciiFile::get_int8_string_list(SGString<int8_t>*& strings, int32_t& num_s
 					int32_t len=i-old_sz;
 					max_string_len=CMath::max(max_string_len, len+overflow_len);
 
-					new (&strings[lines]) SGString<int8_t>();
 					strings[lines].slen=len+overflow_len;
 					strings[lines].string=SG_MALLOC(int8_t, len+overflow_len);
 
@@ -703,7 +706,6 @@ void CAsciiFile::get_string_list(SGString<char>*& strings, int32_t& num_str, int
 					int32_t len=i-old_sz;
 					max_string_len=CMath::max(max_string_len, len+overflow_len);
 
-					new (&strings[lines]) SGString<char>();
 					strings[lines].slen=len+overflow_len;
 					strings[lines].string=SG_MALLOC(char, len+overflow_len);
 
@@ -807,13 +809,18 @@ void CAsciiFile::fname(const sg_type* vec, int32_t len)	\
 {															\
 	mfname(vec, len, 1);									\
 }
+SET_VECTOR(set_vector, set_int8_matrix, int8_t)
 SET_VECTOR(set_vector, set_matrix, uint8_t)
 SET_VECTOR(set_vector, set_matrix, char)
 SET_VECTOR(set_vector, set_matrix, int32_t)
+SET_VECTOR(set_vector, set_uint_matrix, uint32_t)
 SET_VECTOR(set_vector, set_matrix, float32_t)
 SET_VECTOR(set_vector, set_matrix, float64_t)
+SET_VECTOR(set_vector, set_longreal_matrix, floatmax_t)
 SET_VECTOR(set_vector, set_matrix, int16_t)
 SET_VECTOR(set_vector, set_matrix, uint16_t)
+SET_VECTOR(set_vector, set_long_matrix, int64_t)
+SET_VECTOR(set_vector, set_ulong_matrix, uint64_t)
 #undef SET_VECTOR
 
 #define SET_MATRIX(fname, sg_type, fprt_type, type_str) \
@@ -843,9 +850,9 @@ SET_MATRIX(set_long_matrix, int64_t, long long int, "%lli")
 SET_MATRIX(set_ulong_matrix, uint64_t, long long unsigned int, "%llu")
 SET_MATRIX(set_matrix, int16_t, int16_t, "%i")
 SET_MATRIX(set_matrix, uint16_t, uint16_t, "%u")
-SET_MATRIX(set_matrix, float32_t, float32_t, "%f")
-SET_MATRIX(set_matrix, float64_t, float64_t, "%f")
-SET_MATRIX(set_longreal_matrix, floatmax_t, floatmax_t, "%Lf")
+SET_MATRIX(set_matrix, float32_t, float32_t, "%.16g")
+SET_MATRIX(set_matrix, float64_t, float64_t, "%.16lg")
+SET_MATRIX(set_longreal_matrix, floatmax_t, floatmax_t, "%.16Lg")
 #undef SET_MATRIX
 
 #define SET_NDARRAY(fname, sg_type, fprt_type, type_str) \
@@ -1057,7 +1064,7 @@ ssize_t CAsciiFile::getdelim(char **lineptr, size_t *n, char delimiter, FILE *st
 			if (feof(stream))
 				return -1;
 			total_bytes_read+=bytes_read;
-			*lineptr=SG_REALLOC(char, *lineptr, (*n)*2);
+			*lineptr=SG_REALLOC(char, *lineptr, *n, (*n)*2);
 			*n=(*n)*2;
 			// A better reallocated size should be used
 		}

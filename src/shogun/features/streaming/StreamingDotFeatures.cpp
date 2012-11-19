@@ -13,14 +13,6 @@ using namespace shogun;
 
 CStreamingDotFeatures::CStreamingDotFeatures() : CStreamingFeatures()
 {
-	init();
-	set_property(FP_STREAMING_DOT);
-}
-
-CStreamingDotFeatures::CStreamingDotFeatures(CStreamingFile* file, bool is_labelled,
-		int32_t size) : CStreamingFeatures()
-{
-	init(file, is_labelled, size);
 	set_property(FP_STREAMING_DOT);
 }
 
@@ -63,7 +55,7 @@ void CStreamingDotFeatures::expand_if_required(float32_t*& vec, int32_t &len)
 	int32_t dim = get_dim_feature_space();
 	if (dim > len)
 	{
-		vec = SG_REALLOC(float32_t, vec, dim);
+		vec = SG_REALLOC(float32_t, vec, len, dim);
 		memset(&vec[len], 0, (dim-len) * sizeof(float32_t));
 		len = dim;
 	}
@@ -74,7 +66,7 @@ void CStreamingDotFeatures::expand_if_required(float64_t*& vec, int32_t &len)
 	int32_t dim = get_dim_feature_space();
 	if (dim > len)
 	{
-		vec = SG_REALLOC(float64_t, vec, dim);
+		vec = SG_REALLOC(float64_t, vec, len, dim);
 		memset(&vec[len], 0, (dim-len) * sizeof(float64_t));
 		len = dim;
 	}
@@ -102,12 +94,4 @@ void CStreamingDotFeatures::free_feature_iterator(void* iterator)
 {
 	SG_NOTIMPLEMENTED;
 	return;
-}
-
-void CStreamingDotFeatures::init()
-{
-}
-
-void CStreamingDotFeatures::init(CStreamingFile *file, bool is_labelled, int32_t size)
-{
 }
