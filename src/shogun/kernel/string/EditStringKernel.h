@@ -4,11 +4,8 @@
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
- * Written (W) 1999-2010 Soeren Sonnenburg
- * Written (W) 2011 Abhinav Maurya
- * Written (W) 2012 Heiko Strathmann
- * Copyright (C) 1999-2009 Fraunhofer Institute FIRST and Max-Planck-Society
- * Copyright (C) 2010 Berlin Institute of Technology
+ * Written (W) 2012 Kyle McQuisten
+ * Copyright (C) 2012 Kyle McQuisten
  */
 
 #ifndef _EDITSTRINGKERNEL_H___
