@@ -104,30 +104,31 @@ sed -i '/^SVMlight:$$/,/^$$/c\\' $(DESTDIR)/src/LICENSE
 
 prepare-release:
 	@if [ -f $(LOGFILE) ]; then rm -f $(LOGFILE); fi
-	git pull --rebase github master | tee --append $(LOGFILE)
-	git submodule update | tee --append $(LOGFILE)
+	git pull --rebase github master | tee -a $(LOGFILE)
+	git submodule update | tee -a $(LOGFILE)
 	#update changelog
-	git status -v | tee --append $(LOGFILE)
-	@echo | tee --append $(LOGFILE)
-	@echo "Please check output of 'git status'." | tee --append $(LOGFILE)
-	@echo "Press ENTER to continue or Ctrl-C to abort." | tee --append $(LOGFILE)
+	git status -v | tee -a $(LOGFILE)
+	@echo | tee -a $(LOGFILE)
+	@echo "Please check output of 'git status'." | tee -a $(LOGFILE)
+	@echo "Press ENTER to continue or Ctrl-C to abort." | tee -a $(LOGFILE)
 	@read foobar
-	(cd src &&  rm -f ChangeLog ; ./configure ; $(MAKE) ChangeLog && git commit -m "updated changelog" ChangeLog ) | tee --append $(LOGFILE)
+	(cd src &&  rm -f ChangeLog ; ./configure ; $(MAKE) ChangeLog && git commit -m "updated changelog" ChangeLog ) | tee -a $(LOGFILE)
 	#build for all interfaces and update doc
 	git clean -dfx
-	( cd src && ./configure ) | tee --append $(LOGFILE)
-	+$(MAKE) -C src | tee --append $(LOGFILE)
-	+$(MAKE) -C src install DESTDIR=/tmp/sg_test_build | tee --append $(LOGFILE)
-	+$(MAKE) -C src doc DESTDIR=/tmp/sg_test_build | tee --append $(LOGFILE)
-	-$(MAKE) -C src tests DESTDIR=/tmp/sg_test_build | tee --append $(LOGFILE)
+	( cd src && ./configure ) | tee -a $(LOGFILE)
+	+$(MAKE) -C src | tee -a $(LOGFILE)
+	+$(MAKE) -C src install DESTDIR=/tmp/sg_test_build | tee -a $(LOGFILE)
+	+$(MAKE) -C examples | tee -a $(LOGFILE)
+	+$(MAKE) -C src doc DESTDIR=/tmp/sg_test_build | tee -a $(LOGFILE)
+	-$(MAKE) -C src tests DESTDIR=/tmp/sg_test_build | tee -a $(LOGFILE)
 	#$(MAKE) -C src distclean | tee --append $(LOGFILE)
-	git commit doc -m "updated reference documentation" | tee --append $(LOGFILE)
+	git commit doc -m "updated reference documentation" | tee -a $(LOGFILE)
 
-release: src/shogun/lib/versionstring.h $(DESTDIR)/src/shogun/lib/versionstring.h
+release:
 	rm -rf $(DESTDIR)
 	# copy things over to shogun-releases dir
 	git checkout-index --prefix=$(DESTDIR)/ -a
-	cp src/shogun/lib/versionstring.h $(DESTDIR)/src/shogun/lib/versionstring.h
+	if test ! $(SVMLIGHT) = yes; then $(REMOVE_SVMLIGHT); fi
 	tar -c -f $(DESTDIR).tar -C ../shogun-releases $(RELEASENAME)
 	rm -f $(DESTDIR).tar.bz2 $(DESTDIR).tar.gz
 	$(COMPRESS) -9 $(DESTDIR).tar
@@ -135,19 +136,13 @@ release: src/shogun/lib/versionstring.h $(DESTDIR)/src/shogun/lib/versionstring.
 data-release:
 	cd data && git checkout-index --prefix=../$(DATADESTDIR)/ -a
 	rm -f $(DATADESTDIR).tar.bz2 $(DATADESTDIR).tar
-	tar -c -f $(DATARELEASENAME).tar -C ../shogun-releases $(DATARELEASENAME)
+	tar -c -f $(DATADESTDIR).tar -C ../shogun-releases $(DATARELEASENAME)
 	$(COMPRESS) -9 $(DATADESTDIR).tar
 
-embed-main-version: src/shogun/lib/versionstring.h
-	sed -i 's/VERSION_RELEASE "git/VERSION_RELEASE "v$(MAINVERSION)/' src/shogun/lib/versionstring.h
-	sed -i "s/PROJECT_NUMBER         = .*/PROJECT_NUMBER         = v$(MAINVERSION)/" doc/Doxyfile
-
-git-tag-release: embed-main-version
+git-tag-release:
 	git commit -a -m "Preparing for new Release shogun_$(MAINVERSION)"
-	# create shogun X.Y branch and put in versionstring
+	# create shogun X.Y branch
 	git checkout -b shogun_$(VERSIONBASE)
-	git add -f src/shogun/lib/versionstring.h
-	sed -i "s| lib/versionstring.h||" src/Makefile
 	git commit -a -m "Tagging shogun_$(MAINVERSION) release"
 	git tag shogun_$(MAINVERSION)
 
@@ -190,19 +185,6 @@ update-webpage:
 	rm -rf doc/html*
 
 	cd ../shogun-publicity/website && $(MAKE)
-
-src/shogun/lib/versionstring.h:
-	rm -f src/ChangeLog
-	$(MAKE) -C src ChangeLog
-	$(MAKE) -C src/shogun lib/versionstring.h
-
-$(DESTDIR)/src/shogun/lib/versionstring.h: src/shogun/lib/versionstring.h
-	rm -rf $(DESTDIR)
-	git checkout-index --prefix=$(DESTDIR)/ -a
-	if test ! $(SVMLIGHT) = yes; then $(REMOVE_SVMLIGHT); fi
-
-	# remove top level makefile from distribution
-	cp -f src/shogun/lib/versionstring.h $(DESTDIR)/src/shogun/lib/
 
 clean:
 	rm -rf $(DESTDIR)
