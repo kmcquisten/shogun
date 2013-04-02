@@ -25,6 +25,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <shogun/kernel/string/LocalAlignmentStringKernel.h>
+#include <shogun/kernel/normalizer/SqrtDiagKernelNormalizer.h>
 
 using namespace shogun;
 
@@ -407,6 +408,8 @@ float64_t CLocalAlignmentStringKernel::compute(int32_t idx_x, int32_t idx_y)
 
 void CLocalAlignmentStringKernel::init()
 {
+	set_normalizer(new CSqrtDiagKernelNormalizer());
+
 	initialized=false;
 	isAA=NULL;
 	aaIndex=NULL;

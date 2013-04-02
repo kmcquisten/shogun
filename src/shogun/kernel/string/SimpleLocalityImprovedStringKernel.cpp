@@ -5,12 +5,15 @@
  * (at your option) any later version.
  *
  * Written (W) 1999-2008 Gunnar Raetsch
+ * Written (W) 2013 Soeren Sonnenburg
  * Copyright (C) 1999-2009 Fraunhofer Institute FIRST and Max-Planck-Society
+ * Copyright (C) 2013 Soeren Sonnenburg
  */
 
 #include <shogun/lib/common.h>
 #include <shogun/io/SGIO.h>
 #include <shogun/kernel/string/SimpleLocalityImprovedStringKernel.h>
+#include <shogun/kernel/normalizer/SqrtDiagKernelNormalizer.h>
 #include <shogun/features/Features.h>
 #include <shogun/features/StringFeatures.h>
 
@@ -63,12 +66,9 @@ bool CSimpleLocalityImprovedStringKernel::init(CFeatures* l, CFeatures* r)
 	const int32_t pyra_len  = num_features-PYRAL+1;
 	const int32_t pyra_len2 = (int32_t) pyra_len/2;
 
-	SG_FREE(pyramid_weights);
+	pyramid_weights = SGVector<float64_t>(pyra_len);
 
-	pyramid_weights = SG_MALLOC(float64_t, pyra_len);
-	num_pyramid_weights=pyra_len;
-
-	SG_INFO("initializing pyramid weights: size=%ld length=%i\n",
+	SG_DEBUG("initializing pyramid weights: size=%ld length=%i\n",
 		num_features, length);
 
 	float64_t PYRAL_pot;
@@ -107,10 +107,7 @@ bool CSimpleLocalityImprovedStringKernel::init(CFeatures* l, CFeatures* r)
 
 void CSimpleLocalityImprovedStringKernel::cleanup()
 {
-	SG_FREE(pyramid_weights);
-	pyramid_weights = NULL;
-	num_pyramid_weights = 0;
-
+	pyramid_weights = SGVector<float64_t>();
 	CKernel::cleanup();
 }
 
@@ -119,41 +116,16 @@ float64_t CSimpleLocalityImprovedStringKernel::dot_pyr (const char* const x1,
 	     const int32_t DEGREE1, const int32_t DEGREE2, float64_t *pyra)
 {
 	const int32_t PYRAL = 2*NTWIDTH-1; // total window length
-	int32_t pyra_len, pyra_len2;
-	float64_t pot, PYRAL_pot;
+	float64_t pot;
 	float64_t sum;
 	int32_t DEGREE1_1 = (DEGREE1 & 0x1)==0;
 	int32_t DEGREE1_1n = (DEGREE1 & ~0x1)!=0;
 	int32_t DEGREE1_2 = (DEGREE1 & 0x2)!=0;
 	int32_t DEGREE1_3 = (DEGREE1 & ~0x3)!=0;
 	int32_t DEGREE1_4 = (DEGREE1 & 0x4)!=0;
-	{
-	float64_t PYRAL_ = PYRAL;
-	PYRAL_pot = DEGREE1_1 ? 1.0 : PYRAL_;
-	if (DEGREE1_1n)
-	{
-		PYRAL_ *= PYRAL_;
-		if (DEGREE1_2) PYRAL_pot *= PYRAL_;
-		if (DEGREE1_3)
-		{
-			PYRAL_ *= PYRAL_;
-			if (DEGREE1_4) PYRAL_pot *= PYRAL_;
-		}
-	}
-	}
 
 	ASSERT((DEGREE1 & ~0x7) == 0)
 	ASSERT((DEGREE2 & ~0x7) == 0)
-
-	pyra_len = NOF_NTS-PYRAL+1;
-	pyra_len2 = (int32_t) pyra_len/2;
-	{
-	int32_t j;
-	for (j = 0; j < pyra_len; j++)
-		pyra[j] = 4*((float64_t)((j < pyra_len2) ? j+1 : pyra_len-j))/((float64_t)pyra_len);
-	for (j = 0; j < pyra_len; j++)
-		pyra[j] /= PYRAL_pot;
-	}
 
 	register int32_t conv;
 	register int32_t i;
@@ -225,16 +197,14 @@ float64_t CSimpleLocalityImprovedStringKernel::compute(
 
 void CSimpleLocalityImprovedStringKernel::init()
 {
+	set_normalizer(new CSqrtDiagKernelNormalizer());
+
 	length = 3;
 	inner_degree = 3;
 	outer_degree = 1;
-	pyramid_weights=NULL;
-	num_pyramid_weights=0;
 
 	SG_ADD(&length, "length", "Window Length.", MS_AVAILABLE);
 	SG_ADD(&inner_degree, "inner_degree", "Inner degree.", MS_AVAILABLE);
 	SG_ADD(&outer_degree, "outer_degree", "Outer degree.", MS_AVAILABLE);
-
-	m_parameters->add_vector(&pyramid_weights, &num_pyramid_weights,
-			"pyramid_weights", "Pyramid weights.");
+	SG_ADD(&pyramid_weights,"pyramid_weights", "Pyramid weights.", MS_AVAILABLE);
 }
