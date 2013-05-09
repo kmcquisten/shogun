@@ -12,14 +12,12 @@
  *
  */
 #include <shogun/lib/config.h>
- 
-#ifdef HAVE_LAPACK
+
 #ifdef HAVE_EIGEN3
 
 #include <shogun/regression/gp/LaplacianInferenceMethod.h>
 #include <shogun/regression/gp/GaussianLikelihood.h>
 #include <shogun/regression/gp/StudentsTLikelihood.h>
-#include <shogun/mathematics/lapack.h>
 #include <shogun/mathematics/Math.h>
 #include <shogun/labels/RegressionLabels.h>
 #include <shogun/kernel/GaussianKernel.h>
@@ -234,7 +232,7 @@ get_marginal_likelihood_derivatives(CMap<TParameter*,
 
 	Map<VectorXd> eigen_W(W.vector, W.vlen);
 
-	Map<MatrixXd> eigen_temp_kernel(temp_kernel.matrix, 
+	Map<MatrixXd> eigen_temp_kernel(temp_kernel.matrix,
         	temp_kernel.num_rows, temp_kernel.num_cols);
 
 	if (eigen_W.minCoeff() < 0)
@@ -422,7 +420,7 @@ get_marginal_likelihood_derivatives(CMap<TParameter*,
 			else if (lik_first_deriv[0]+lik_second_deriv[0] != CMath::INFTY)
 			{
 				Map<VectorXd> eigen_fd(lik_first_deriv.vector, lik_first_deriv.vlen);
-				
+
 				Map<VectorXd> eigen_sd(lik_second_deriv.vector, lik_second_deriv.vlen);
 
 				sum[0] = -g.dot(eigen_sd);
@@ -496,7 +494,7 @@ temp_kernel.num_rows, temp_kernel.num_cols);
 
 	Map<VectorXd> eigen_W(W.vector, W.vlen);
 
-	Map<VectorXd> eigen_m_means(m_means.vector, m_means.vlen);	
+	Map<VectorXd> eigen_m_means(m_means.vector, m_means.vlen);
 
 	if (eigen_W.minCoeff() < 0)
 	{
@@ -511,7 +509,7 @@ temp_kernel.num_rows, temp_kernel.num_cols);
 		A = A + eigen_temp_kernel*m_scale*m_scale*temp_diagonal;
 
 		FullPivLU<MatrixXd> lu(A);
-	
+
 		float64_t result = (eigen_temp_alpha.transpose()*(eigen_function-eigen_m_means))[0]/2.0 -
 				lp + log(lu.determinant())/2.0;
 
@@ -534,7 +532,7 @@ temp_kernel.num_rows, temp_kernel.num_cols);
 		for (index_t i = 0; i < m_L.num_rows; i++)
 			sum += log(m_L(i,i));
 
-		float64_t result = eigen_temp_alpha.dot(eigen_function-eigen_m_means)/2.0 - 
+		float64_t result = eigen_temp_alpha.dot(eigen_function-eigen_m_means)/2.0 -
 			lp + sum;
 
 		return result;
@@ -669,12 +667,12 @@ void CLaplacianInferenceMethod::update_alpha()
 
 	VectorXd eigen_function;
 
-	Map<VectorXd> eigen_m_means(m_means.vector, m_means.vlen);	
+	Map<VectorXd> eigen_m_means(m_means.vector, m_means.vlen);
 
 	if (m_alpha.vlen != m_labels->get_num_labels())
 	{
 
-		
+
 		temp_alpha = SGVector<float64_t>(m_labels->get_num_labels());
 
 		for (index_t i = 0; i < temp_alpha.vlen; i++)
@@ -778,7 +776,16 @@ void CLaplacianInferenceMethod::update_alpha()
 			//Suggested by Vanhatalo et. al.,
 			//Gaussian Process Regression with Student's t likelihood, NIPS 2009
 			//Quoted from infLaplace.m
-			float64_t df = m_model->get_degrees_freedom();
+			float64_t df;
+
+			if (m_model->get_model_type()==LT_STUDENTST)
+			{
+				CStudentsTLikelihood* lik=CStudentsTLikelihood::obtain_from_generic(m_model);
+				df=lik->get_degrees_freedom();
+				SG_UNREF(lik);
+			}
+			else
+				df=1;
 
 			for (index_t i = 0; i < eigen_W.rows(); i++)
 				eigen_W[i] += 2.0/(df)*dlp[i]*dlp[i];
@@ -797,20 +804,13 @@ void CLaplacianInferenceMethod::update_alpha()
 				eigen_temp_kernel*m_scale*m_scale) +
 				MatrixXd::Identity(m_ktrtr.num_rows, m_ktrtr.num_cols));
 
-		MatrixXd chol = L.matrixL();
-
-		MatrixXd temp = L.matrixL();
-
 		Map<VectorXd> temp_eigen_dlp(dlp.vector, dlp.vlen);
 
 		VectorXd b = eigen_W.cwiseProduct((eigen_function - eigen_m_means)) + temp_eigen_dlp;
 
-		chol = chol.colPivHouseholderQr().solve(eigen_sW.cwiseProduct(
-				(eigen_temp_kernel*b*m_scale*m_scale)));
+		MatrixXd chol = L.solve(eigen_sW.cwiseProduct((eigen_temp_kernel*b*m_scale*m_scale)));
 
-		chol = temp.transpose().colPivHouseholderQr().solve(chol);
-
-		VectorXd dalpha = b - eigen_sW.cwiseProduct(chol) - eigen_temp_alpha;		
+		VectorXd dalpha = b - eigen_sW.cwiseProduct(chol) - eigen_temp_alpha;
 
 		Psi_line func;
 
@@ -878,5 +878,3 @@ void CLaplacianInferenceMethod::update_alpha()
 }
 
 #endif // HAVE_EIGEN3
-#endif // HAVE_LAPACK
-

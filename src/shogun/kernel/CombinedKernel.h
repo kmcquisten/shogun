@@ -402,6 +402,15 @@ class CCombinedKernel : public CKernel
 		 */
 		inline CList* get_list() {SG_REF(kernel_list); return kernel_list;}
 
+		/** Returns a list of all the different CombinedKernels produced by the cross-product between the kernel lists 
+		*	The returned list performs reference counting on the contained CombinedKernels.
+		*
+		* @param kernel_list a list of lists of kernels. Each sub-list must contain kernels of the same type
+		*
+		* @return a list of CombinedKernels.
+		*/
+		static CList* combine_kernels(CList* kernel_list);
+
 	protected:
 		/** compute kernel function
 		 *
