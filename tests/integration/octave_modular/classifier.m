@@ -28,7 +28,7 @@ function y = classifier(filename)
 	end
 
 	if ~isempty(classifier_labels)
-		lab=Labels(classifier_labels);
+		lab=BinaryLabels(classifier_labels);
 	end
 
 	if strcmp(classifier_name, 'GMNPSVM')==1
@@ -45,6 +45,7 @@ function y = classifier(filename)
 
 	elseif strcmp(classifier_name, 'LibLinear')==1
 		classifier=LibLinear(classifier_C, feats_train, lab);
+		classifier.set_liblinear_solver_type(L2R_LR)
 
 	elseif strcmp(classifier_name, 'LibSVMMultiClass')==1
 		classifier=LibSVMMultiClass(classifier_C, kernel, lab);
@@ -157,7 +158,7 @@ function y = classifier(filename)
 	end
 
 	classified=max(abs(
-		classifier.classify().get_labels()-classifier_classified));
+		classifier.apply().get_values()-classifier_classified));
 
 	data={'classifier', alphas, bias, sv, classified};
 	y=check_accuracy(classifier_accuracy, data);
