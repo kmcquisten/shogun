@@ -20,6 +20,8 @@
 #include <shogun/features/FeatureTypes.h>
 #include <shogun/features/SubsetStack.h>
 #include <shogun/lib/List.h>
+#include <shogun/lib/DynamicObjectArray.h>
+#include <shogun/lib/DynamicArray.h>
 
 namespace shogun
 {
@@ -104,16 +106,14 @@ class CFeatures : public CSGObject
 		/** add preprocessor
 		 *
 		 * @param p preprocessor to set
-		 * @return something inty
 		 */
-		virtual int32_t add_preprocessor(CPreprocessor* p);
+		virtual void add_preprocessor(CPreprocessor* p);
 
 		/** delete preprocessor from list
-		 * caller has to clean up returned preproc
 		 *
 		 * @param num index of preprocessor in list
 		 */
-		virtual CPreprocessor* del_preprocessor(int32_t num);
+		virtual void del_preprocessor(int32_t num);
 
 		/** get specified preprocessor
 		 *
@@ -147,6 +147,9 @@ class CFeatures : public CSGObject
 
 		/** clears all preprocs */
 		void clean_preprocessors();
+
+		/** print preprocessors */
+		void list_preprocessors();
 
 		/** get cache size
 		 *
@@ -297,13 +300,10 @@ class CFeatures : public CSGObject
 		int32_t cache_size;
 
 		/** list of preprocessors */
-		CPreprocessor** preproc;
-
-		/** number of preprocs in list */
-		int32_t num_preproc;
+		CDynamicObjectArray* preproc;
 
 		/** i'th entry is true if features were already preprocessed with preproc i */
-		bool* preprocessed;
+		CDynamicArray<bool>* preprocessed;
 
 	protected:
 		/** subset used for index transformations */

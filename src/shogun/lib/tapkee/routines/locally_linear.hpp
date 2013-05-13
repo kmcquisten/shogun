@@ -7,8 +7,8 @@
 #define TAPKEE_LOCALLY_LINEAR_H_
 
 /* Tapkee includes */
-#include <shogun/lib/tapkee/routines/eigen_embedding.hpp>
-#include <shogun/lib/tapkee/tapkee_defines.hpp>
+#include <shogun/lib/tapkee/routines/eigendecomposition.hpp>
+#include <shogun/lib/tapkee/defines.hpp>
 #include <shogun/lib/tapkee/utils/matrix.hpp>
 #include <shogun/lib/tapkee/utils/time.hpp>
 /* End of Tapkee includes */
@@ -28,7 +28,7 @@ SparseWeightMatrix tangent_weight_matrix(RandomAccessIterator begin, RandomAcces
 	const IndexType k = neighbors[0].size();
 
 	SparseTriplets sparse_triplets;
-	sparse_triplets.reserve((k*k+k+1)*(end-begin));
+	sparse_triplets.reserve((k*k+2*k+1)*(end-begin));
 
 #pragma omp parallel shared(begin,end,neighbors,callback,sparse_triplets) default(none)
 	{
@@ -62,7 +62,8 @@ SparseWeightMatrix tangent_weight_matrix(RandomAccessIterator begin, RandomAcces
 #ifdef TAPKEE_WITH_ARPACK
 			if (partial_eigendecomposer)
 			{
-				G.rightCols(target_dimension).noalias() = eigen_embedding<DenseMatrix,DenseMatrixOperation>(Arpack,gram_matrix,target_dimension,0).first;
+				G.rightCols(target_dimension).noalias() =
+					eigendecomposition<DenseMatrix,DenseMatrixOperation>(Arpack,gram_matrix,target_dimension,0).first;
 			}
 			else
 #endif
