@@ -2832,7 +2832,7 @@ void TParameter::copy_data(const TParameter* source)
 	SG_SDEBUG("leaving TParameter::copy_data for %s\n", m_name)
 }
 
-bool TParameter::equals(TParameter* other, floatmax_t accuracy)
+bool TParameter::equals(TParameter* other, float64_t accuracy)
 {
 	SG_SDEBUG("entering TParameter::equals()\n");
 
@@ -3141,7 +3141,6 @@ bool TParameter::compare_ptype(EPrimitiveType ptype, void* data1, void* data2,
 	{
 		floatmax_t casted1=*((floatmax_t*)data1);
 		floatmax_t casted2=*((floatmax_t*)data2);
-
 		if (CMath::abs(casted1-casted2)>accuracy)
 		{
 			SG_SDEBUG("leaving TParameter::compare_ptype(): PT_FLOATMAX: "
@@ -3162,18 +3161,25 @@ bool TParameter::compare_ptype(EPrimitiveType ptype, void* data1, void* data2,
 			return true;
 		}
 
-		if (casted1 && !(casted1->equals(casted2, accuracy)))
+		/* make sure to not call NULL methods */
+		if (casted1)
 		{
-			SG_SDEBUG("leaving TParameter::compare_ptype(): PT_SGOBJECT "
-					"equals returned false\n");
-			return false;
+			if (!(casted1->equals(casted2, accuracy)))
+			{
+				SG_SDEBUG("leaving TParameter::compare_ptype(): PT_SGOBJECT "
+						"equals returned false\n");
+				return false;
+			}
 		}
-
-		if (casted2 && !(casted2->equals(casted1, accuracy)))
+		else
 		{
-			SG_SDEBUG("leaving TParameter::compare_ptype(): PT_SGOBJECT "
-					"equals returned false\n");
-			return false;
+			if (!(casted2->equals(casted1, accuracy)))
+			{
+				SG_SDEBUG("leaving TParameter::compare_ptype(): PT_SGOBJECT "
+						"equals returned false\n");
+				return false;
+			}
+
 		}
 		break;
 	}
