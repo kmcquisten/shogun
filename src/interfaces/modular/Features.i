@@ -51,6 +51,7 @@
 %rename(CombinedFeatures) CCombinedFeatures;
 %rename(CombinedDotFeatures) CCombinedDotFeatures;
 %rename(Labels) CLabels;
+%rename(LabelsFactory) CLabelsFactory;
 
 PROTOCOLS_DENSELABELS(CDenseLabels, DenseLabels, float64_t, "d\0", NPY_FLOAT64)
 %rename(DenseLabels) CDenseLabels;
@@ -478,6 +479,7 @@ namespace shogun
 %include <shogun/features/CombinedDotFeatures.h>
 
 %include <shogun/labels/Labels.h>
+%include <shogun/labels/LabelsFactory.h>
 %include <shogun/labels/DenseLabels.h>
 %include <shogun/labels/BinaryLabels.h>
 %include <shogun/labels/LatentLabels.h>
@@ -485,6 +487,7 @@ namespace shogun
 %include <shogun/labels/RegressionLabels.h>
 %include <shogun/labels/StructuredLabels.h>
 %include <shogun/labels/MulticlassMultipleOutputLabels.h>
+
 %include <shogun/features/RealFileFeatures.h>
 %include <shogun/features/FKFeatures.h>
 %include <shogun/features/TOPFeatures.h>
