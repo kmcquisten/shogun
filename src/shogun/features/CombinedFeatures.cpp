@@ -46,20 +46,6 @@ CCombinedFeatures::~CCombinedFeatures()
 	SG_UNREF(feature_array);
 }
 
-//TODO remove from hierarchy in future patch
-int32_t CCombinedFeatures::get_size() const
-{
-	if (feature_array->get_num_elements()==0)
-		return 0;
-	CFeatures* f = (CFeatures*) feature_array->get_element(0);
-	if (!f) 
-		return 0;
-	int32_t size = f->get_size();
-	SG_UNREF(f);
-	return size;
-}
-
-
 CFeatures* CCombinedFeatures::get_feature_obj(int32_t idx)
 {
 	return (CFeatures*) feature_array->get_element(idx);
@@ -147,7 +133,20 @@ bool CCombinedFeatures::insert_feature_obj(CFeatures* obj, int32_t idx)
 
 bool CCombinedFeatures::append_feature_obj(CFeatures* obj)
 {
-	return insert_feature_obj(obj, get_num_feature_obj());
+	ASSERT(obj)
+	int32_t n=obj->get_num_vectors();
+
+	if (get_num_vectors()>0 && n!=get_num_vectors())
+	{
+		SG_ERROR("Number of feature vectors does not match (expected %d, "
+				"obj has %d)\n", get_num_vectors(), n);
+	}
+
+	num_vec=n;
+
+	int num_feature_obj = get_num_feature_obj();
+	feature_array->push_back(obj);
+	return num_feature_obj+1 == feature_array->get_num_elements();
 }
 
 bool CCombinedFeatures::delete_feature_obj(int32_t idx)

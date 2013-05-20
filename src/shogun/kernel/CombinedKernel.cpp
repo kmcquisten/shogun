@@ -107,13 +107,16 @@ bool CCombinedKernel::init(CFeatures* l, CFeatures* r)
 	for (index_t k_idx=0; k_idx<get_num_kernels() && result; k_idx++)
 	{
 		k = get_kernel(k_idx);
-		lf = ((CCombinedFeatures*) l)->get_feature_obj(f_idx);
-		rf = ((CCombinedFeatures*) r)->get_feature_obj(f_idx);
-		f_idx++;
 
+		if (!k)
+			SG_ERROR("Kernel at position %d is NULL\n", k_idx);	
+		
 		// skip over features - the custom kernel does not need any
 		if (k->get_kernel_type() != K_CUSTOM)
 		{
+			lf = ((CCombinedFeatures*) l)->get_feature_obj(f_idx);
+			rf = ((CCombinedFeatures*) r)->get_feature_obj(f_idx);
+			f_idx++;
 			if (!lf || !rf)
 			{
 				SG_UNREF(lf);
@@ -123,7 +126,12 @@ bool CCombinedKernel::init(CFeatures* l, CFeatures* r)
 			}
 
 			SG_DEBUG("Initializing 0x%p - \"%s\"\n", this, k->get_name())
-			result=k->init(lf,rf);		
+			result=k->init(lf,rf);
+			SG_UNREF(lf);
+			SG_UNREF(rf);
+			
+			if (!result)
+				break;
 		}
 		else
 		{
@@ -137,15 +145,16 @@ bool CCombinedKernel::init(CFeatures* l, CFeatures* r)
 		}
 
 		SG_UNREF(k);
-		SG_UNREF(lf);
-		SG_UNREF(rf);	
 	}
 
 	if (!result)
 	{
 		SG_INFO("CombinedKernel: Initialising the following kernel failed\n")
 		if (k)
+		{
 			k->list_kernel();
+			SG_UNREF(k);
+		}
 		else
 			SG_INFO("<NULL>\n")
 		return false;
@@ -945,7 +954,7 @@ CList* CCombinedKernel::combine_kernels(CList* kernel_list)
 		{
 			CCombinedKernel* comb_kernel = 
 					dynamic_cast<CCombinedKernel* >(kernel_array.get_element(index));
-			comb_kernel->insert_kernel(c_kernel, 0);
+			comb_kernel->append_kernel(c_kernel);
 			SG_UNREF(comb_kernel);
 		}
 		++kernel_index;
