@@ -243,7 +243,9 @@ class CMath : public CSGObject
 		///return the absolute value of a complex number
 		static inline float64_t abs(complex64_t a)
 		{
-			return std::abs(a);
+			float64_t a_real=a.real();
+			float64_t a_imag=a.imag();
+			return (CMath::sqrt(a_real*a_real+a_imag*a_imag));
 		}
 		//@}
 
@@ -505,7 +507,7 @@ class CMath : public CSGObject
 
 		static inline float64_t sinh(float64_t x)
 		{
-			return ::asinh(x);	//TODO is this correct?
+			return ::sinh(x);
 		}
 
 		/// sinh(x), x being a complex64_t
@@ -724,7 +726,7 @@ class CMath : public CSGObject
 		template <class T>
 			static void qsort(T* output, int32_t size)
 			{
-				if (size==1)
+				if (size<=1)
 					return;
 
 				if (size==2)
@@ -930,7 +932,7 @@ class CMath : public CSGObject
 		template <class T>
 			static void qsort(T** vector, index_t length)
 			{
-				if (length==1)
+				if (length<=1)
 					return;
 
 				if (length==2)
@@ -1416,6 +1418,11 @@ void* CMath::parallel_qsort_index(void* p)
 		int32_t sort_limit=ps->sort_limit;
 		int32_t num_threads=ps->num_threads;
 
+		if (size<2)
+		{
+			return NULL;
+		}
+
 		if (size==2)
 		{
 			if (output[0] > output [1])
@@ -1512,7 +1519,7 @@ void* CMath::parallel_qsort_index(void* p)
 	template <class T1,class T2>
 void CMath::qsort_index(T1* output, T2* index, uint32_t size)
 {
-	if (size==1)
+	if (size<=1)
 		return;
 
 	if (size==2)
@@ -1556,6 +1563,9 @@ void CMath::qsort_index(T1* output, T2* index, uint32_t size)
 	template <class T1,class T2>
 void CMath::qsort_backward_index(T1* output, T2* index, int32_t size)
 {
+	if (size<=1)
+		return;
+
 	if (size==2)
 	{
 		if (output[0] < output [1])
