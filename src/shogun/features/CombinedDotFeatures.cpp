@@ -237,8 +237,15 @@ bool CCombinedDotFeatures::get_next_feature(int32_t& index, float64_t& value, vo
 			return true;
 		}
 
+		if (++iterator_idx == get_num_feature_obj())
+		{
+			index = -1;
+			break;
+		}
+
 		it->f->free_feature_iterator(it->iterator);
-		it->f=get_feature_obj(++iterator_idx);
+		SG_UNREF(it->f);
+		it->f=get_feature_obj(iterator_idx);
 		if (it->f)
 			it->iterator=it->f->get_feature_iterator(it->vector_index);
 		else
@@ -254,6 +261,7 @@ void CCombinedDotFeatures::free_feature_iterator(void* iterator)
 		combined_feature_iterator* it = (combined_feature_iterator*) iterator;
 		if (it->iterator && it->f)
 			it->f->free_feature_iterator(it->iterator);
+		SG_UNREF(it->f);
 		SG_FREE(it);
 	}
 }
