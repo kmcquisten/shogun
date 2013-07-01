@@ -12,16 +12,15 @@
  * http://www.gaussianprocess.org/gpml/code/matlab/doc/
  */
 
-#include <shogun/lib/config.h>
+#include <shogun/machine/gp/FITCInferenceMethod.h>
 
 #ifdef HAVE_EIGEN3
 
-#include <shogun/machine/gp/FITCInferenceMethod.h>
 #include <shogun/machine/gp/GaussianLikelihood.h>
 #include <shogun/mathematics/Math.h>
 #include <shogun/labels/RegressionLabels.h>
-#include <shogun/kernel/GaussianKernel.h>
 #include <shogun/features/CombinedFeatures.h>
+#include <shogun/features/DotFeatures.h>
 
 #include <shogun/mathematics/eigen3.h>
 
@@ -122,6 +121,8 @@ void CFITCInferenceMethod::check_members()
 	REQUIRE(m_labels, "Labels must be attached\n")
 	REQUIRE(m_labels->get_num_labels(),
 			"Number of labels must be greater than zero\n")
+	REQUIRE(m_labels->get_label_type()==LT_REGRESSION,
+		"Labels must be type of CRegressionLabels\n")
 	REQUIRE(m_labels->get_num_labels()==m_features->get_num_vectors(),
 		"Number of training vectors must match number of labels\n")
 	REQUIRE(m_kernel, "Kernel must be assigned\n")
@@ -157,8 +158,7 @@ void CFITCInferenceMethod::check_members()
 }
 
 CMap<TParameter*, SGVector<float64_t> > CFITCInferenceMethod::
-get_marginal_likelihood_derivatives(CMap<TParameter*,
-		CSGObject*>& para_dict)
+	get_marginal_likelihood_derivatives(CMap<TParameter*, CSGObject*>& para_dict)
 {
 	if (update_parameter_hash())
 		update_all();

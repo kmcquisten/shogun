@@ -16,11 +16,9 @@
 
 #ifdef HAVE_EIGEN3
 
-#include <shogun/mathematics/eigen3.h>
-#include <shogun/modelselection/ParameterCombination.h>
+#include <shogun/labels/RegressionLabels.h>
 #include <shogun/mathematics/Statistics.h>
 #include <shogun/mathematics/Math.h>
-#include <shogun/base/Parameter.h>
 #include <shogun/mathematics/eigen3.h>
 
 using namespace shogun;
@@ -33,10 +31,9 @@ CStudentsTLikelihood::CStudentsTLikelihood() : CLikelihoodModel()
 
 CStudentsTLikelihood::CStudentsTLikelihood(float64_t sigma, float64_t df) : CLikelihoodModel()
 {
-	REQUIRE(sigma>0.0, "%s::CStudentsTLikelihood(): Standard deviation "
-			"must be greater than zero\n", get_name())
-	REQUIRE(df>1.0, "%s::CStudentsTLikelihood(): Number of degrees of "
-			"freedom must be greater than one\n", get_name())
+	REQUIRE(sigma>0.0, "Scale parameter must be greater than zero\n")
+	REQUIRE(df>1.0, "Number of degrees of freedom must be greater than one\n")
+
 	init();
 	m_sigma=sigma;
 	m_df=df;
@@ -47,23 +44,22 @@ void CStudentsTLikelihood::init()
 	m_sigma=1.0;
 	m_df=3.0;
 	SG_ADD(&m_df, "df", "Degrees of Freedom.", MS_AVAILABLE);
-	SG_ADD(&m_sigma, "sigma", "Observation Noise.", MS_AVAILABLE);
+	SG_ADD(&m_sigma, "sigma", "Scale Parameter.", MS_AVAILABLE);
 }
 
 CStudentsTLikelihood::~CStudentsTLikelihood()
 {
 }
 
-CStudentsTLikelihood* CStudentsTLikelihood::obtain_from_generic(CLikelihoodModel* likelihood)
+CStudentsTLikelihood* CStudentsTLikelihood::obtain_from_generic(CLikelihoodModel* lik)
 {
-	ASSERT(likelihood!=NULL);
+	ASSERT(lik!=NULL);
 
-	if (likelihood->get_model_type()!=LT_STUDENTST)
-		SG_SERROR("CStudentsTLikelihood::obtain_from_generic(): provided likelihood is "
-			"not of type CStudentsTLikelihood!\n")
+	if (lik->get_model_type()!=LT_STUDENTST)
+		SG_SERROR("Provided likelihood is not of type CStudentsTLikelihood!\n")
 
-	SG_REF(likelihood);
-	return (CStudentsTLikelihood*)likelihood;
+	SG_REF(lik);
+	return (CStudentsTLikelihood*)lik;
 }
 
 SGVector<float64_t> CStudentsTLikelihood::evaluate_means(
@@ -76,27 +72,31 @@ SGVector<float64_t> CStudentsTLikelihood::evaluate_variances(
 		SGVector<float64_t>& vars)
 {
 	SGVector<float64_t> result(vars);
+	Map<VectorXd> eigen_result(result.vector, result.vlen);
 
-	for (index_t i=0; i<result.vlen; i++)
+	if (m_df<2.0)
+		eigen_result=CMath::INFTY*VectorXd::Ones(result.vlen);
+	else
 	{
-		if (m_df<2.0)
-			result[i]=CMath::INFTY;
-		else
-			result[i]+=m_df*CMath::sq(m_sigma)/(m_df-2.0);
+		eigen_result+=CMath::sq(m_sigma)*m_df/(m_df-2.0)*
+			VectorXd::Ones(result.vlen);
 	}
 
 	return result;
 }
 
-float64_t CStudentsTLikelihood::get_log_probability_f(
-		CRegressionLabels* labels, SGVector<float64_t> m_function)
+float64_t CStudentsTLikelihood::get_log_probability_f(CLabels* lab,
+		SGVector<float64_t> func)
 {
-	Map<VectorXd> eigen_f(m_function.vector, m_function.vlen);
+	REQUIRE(lab->get_label_type()==LT_REGRESSION,
+		"Labels must be type of CRegressionLabels\n")
 
-	SGVector<float64_t> r(m_function.vlen);
+	Map<VectorXd> eigen_f(func.vector, func.vlen);
+
+	SGVector<float64_t> r(func.vlen);
 	Map<VectorXd> eigen_r(r.vector, r.vlen);
 
-	SGVector<float64_t> y=labels->get_labels();
+	SGVector<float64_t> y=((CRegressionLabels*)lab)->get_labels();
 	Map<VectorXd> eigen_y(y.vector, y.vlen);
 
 	// compute lZ=log(gamma(df/2+1/2))-log(gamma(df/2))-log(df*pi*sigma^2)/2
@@ -113,15 +113,18 @@ float64_t CStudentsTLikelihood::get_log_probability_f(
 	return eigen_r.sum();
 }
 
-SGVector<float64_t>  CStudentsTLikelihood::get_log_probability_derivative_f(
-		CRegressionLabels* labels, SGVector<float64_t> m_function, index_t j)
+SGVector<float64_t> CStudentsTLikelihood::get_log_probability_derivative_f(
+	CLabels* lab, SGVector<float64_t> func, index_t i)
 {
-	Map<VectorXd> eigen_f(m_function.vector, m_function.vlen);
+	REQUIRE(lab->get_label_type()==LT_REGRESSION,
+		"Labels must be type of CRegressionLabels\n")
 
-	SGVector<float64_t> r(m_function.vlen);
+	Map<VectorXd> eigen_f(func.vector, func.vlen);
+
+	SGVector<float64_t> r(func.vlen);
 	Map<VectorXd> eigen_r(r.vector, r.vlen);
 
-	SGVector<float64_t> y=labels->get_labels();
+	SGVector<float64_t> y=((CRegressionLabels*)lab)->get_labels();
 	Map<VectorXd> eigen_y(y.vector, y.vlen);
 
 	// compute r=y-f, r2=r.^2
@@ -131,13 +134,13 @@ SGVector<float64_t>  CStudentsTLikelihood::get_log_probability_derivative_f(
 	// compute a=(y-f).^2+df*sigma^2
 	VectorXd a=eigen_r2+VectorXd::Ones(r.vlen)*m_df*CMath::sq(m_sigma);
 
-	if (j==1)
+	if (i==1)
 	{
 		// compute first derivative of log probability wrt f:
 		// dlp=(df+1)*(y-f)./a
 		eigen_r=(m_df+1)*eigen_r.cwiseQuotient(a);
 	}
-	else if (j==2)
+	else if (i==2)
 	{
 		// compute second derivative of log probability wrt f:
 		// d2lp=(df+1)*((y-f)^2-df*sigma^2)./a.^2
@@ -145,7 +148,7 @@ SGVector<float64_t>  CStudentsTLikelihood::get_log_probability_derivative_f(
 
 		eigen_r=(m_df+1)*b.cwiseQuotient(a.cwiseProduct(a));
 	}
-	else if (j==3)
+	else if (i==3)
 	{
 		// compute third derivative of log probability wrt f:
 		// d3lp=(f+1)*2*(y-f).*((y-f)^2-3*f*sigma^2)./a.^3
@@ -163,18 +166,20 @@ SGVector<float64_t>  CStudentsTLikelihood::get_log_probability_derivative_f(
 	return r;
 }
 
-SGVector<float64_t> CStudentsTLikelihood::get_first_derivative(
-		CRegressionLabels* labels, TParameter* param,
-		CSGObject* obj, SGVector<float64_t> m_function)
+SGVector<float64_t> CStudentsTLikelihood::get_first_derivative(CLabels* lab,
+		TParameter* param, CSGObject* obj, SGVector<float64_t> func)
 {
-	SGVector<float64_t> r(m_function.vlen);
-	Map<VectorXd> eigen_r(r.vector, r.vlen);
+	REQUIRE(lab->get_label_type()==LT_REGRESSION,
+		"Labels must be type of CRegressionLabels\n")
 
 	if (obj==this)
 	{
-		Map<VectorXd> eigen_f(m_function.vector, m_function.vlen);
+		SGVector<float64_t> r(func.vlen);
+		Map<VectorXd> eigen_r(r.vector, r.vlen);
 
-		SGVector<float64_t> y=labels->get_labels();
+		Map<VectorXd> eigen_f(func.vector, func.vlen);
+
+		SGVector<float64_t> y=((CRegressionLabels*)lab)->get_labels();
 		Map<VectorXd> eigen_y(y.vector, y.vlen);
 
 		// compute r=y-f and r2=(y-f).^2
@@ -211,23 +216,23 @@ SGVector<float64_t> CStudentsTLikelihood::get_first_derivative(
 		}
 	}
 
-	r[0]=CMath::INFTY;
-
-	return r;
+	return SGVector<float64_t>();
 }
 
-SGVector<float64_t> CStudentsTLikelihood::get_second_derivative(
-		CRegressionLabels* labels, TParameter* param,
-		CSGObject* obj, SGVector<float64_t> m_function)
+SGVector<float64_t> CStudentsTLikelihood::get_second_derivative(CLabels* lab,
+		TParameter* param, CSGObject* obj, SGVector<float64_t> func)
 {
-	SGVector<float64_t> r(m_function.vlen);
-	Map<VectorXd> eigen_r(r.vector, r.vlen);
+	REQUIRE(lab->get_label_type()==LT_REGRESSION,
+		"Labels must be type of CRegressionLabels\n")
 
 	if (obj==this)
 	{
-		Map<VectorXd> eigen_f(m_function.vector, m_function.vlen);
+		SGVector<float64_t> r(func.vlen);
+		Map<VectorXd> eigen_r(r.vector, r.vlen);
 
-		SGVector<float64_t> y=labels->get_labels();
+		Map<VectorXd> eigen_f(func.vector, func.vlen);
+
+		SGVector<float64_t> y=((CRegressionLabels*)lab)->get_labels();
 		Map<VectorXd> eigen_y(y.vector, y.vlen);
 
 		// compute r=y-f and r2=(y-f).^2
@@ -258,23 +263,23 @@ SGVector<float64_t> CStudentsTLikelihood::get_second_derivative(
 		}
 	}
 
-	r[0]=CMath::INFTY;
-
-	return r;
+	return SGVector<float64_t>();
 }
 
-SGVector<float64_t> CStudentsTLikelihood::get_third_derivative(
-		CRegressionLabels* labels, TParameter* param,
-		CSGObject* obj, SGVector<float64_t> m_function)
+SGVector<float64_t> CStudentsTLikelihood::get_third_derivative(CLabels* lab,
+		TParameter* param, CSGObject* obj, SGVector<float64_t> func)
 {
-	SGVector<float64_t> r(m_function.vlen);
-	Map<VectorXd> eigen_r(r.vector, r.vlen);
+	REQUIRE(lab->get_label_type()==LT_REGRESSION,
+		"Labels must be type of CRegressionLabels\n")
 
 	if (obj==this)
 	{
-		Map<VectorXd> eigen_f(m_function.vector, m_function.vlen);
+		SGVector<float64_t> r(func.vlen);
+		Map<VectorXd> eigen_r(r.vector, r.vlen);
 
-		SGVector<float64_t> y=labels->get_labels();
+		Map<VectorXd> eigen_f(func.vector, func.vlen);
+
+		SGVector<float64_t> y=((CRegressionLabels*)lab)->get_labels();
 		Map<VectorXd> eigen_y(y.vector, y.vlen);
 
 		// compute r=y-f and r2=(y-f).^2
@@ -310,9 +315,7 @@ SGVector<float64_t> CStudentsTLikelihood::get_third_derivative(
 		}
 	}
 
-	r[0] = CMath::INFTY;
-
-	return r;
+	return SGVector<float64_t>();
 }
 
-#endif //HAVE_EIGEN3
+#endif // HAVE_EIGEN3
