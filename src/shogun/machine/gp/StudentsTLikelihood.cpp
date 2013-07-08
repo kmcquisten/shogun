@@ -62,16 +62,16 @@ CStudentsTLikelihood* CStudentsTLikelihood::obtain_from_generic(CLikelihoodModel
 	return (CStudentsTLikelihood*)lik;
 }
 
-SGVector<float64_t> CStudentsTLikelihood::evaluate_means(
-		SGVector<float64_t>& means)
+SGVector<float64_t> CStudentsTLikelihood::evaluate_means(SGVector<float64_t> mu,
+		SGVector<float64_t> s2)
 {
-	return SGVector<float64_t>(means);
+	return SGVector<float64_t>(mu);
 }
 
-SGVector<float64_t> CStudentsTLikelihood::evaluate_variances(
-		SGVector<float64_t>& vars)
+SGVector<float64_t> CStudentsTLikelihood::evaluate_variances(SGVector<float64_t> mu,
+		SGVector<float64_t> s2)
 {
-	SGVector<float64_t> result(vars);
+	SGVector<float64_t> result(s2);
 	Map<VectorXd> eigen_result(result.vector, result.vlen);
 
 	if (m_df<2.0)
@@ -85,7 +85,7 @@ SGVector<float64_t> CStudentsTLikelihood::evaluate_variances(
 	return result;
 }
 
-float64_t CStudentsTLikelihood::get_log_probability_f(CLabels* lab,
+SGVector<float64_t> CStudentsTLikelihood::get_log_probability_f(CLabels* lab,
 		SGVector<float64_t> func)
 {
 	REQUIRE(lab->get_label_type()==LT_REGRESSION,
@@ -110,7 +110,7 @@ float64_t CStudentsTLikelihood::get_log_probability_f(CLabels* lab,
 	eigen_r=eigen_lZ-(m_df+1)*
 		(eigen_r+VectorXd::Ones(r.vlen)).array().log().matrix()/2.0;
 
-	return eigen_r.sum();
+	return r;
 }
 
 SGVector<float64_t> CStudentsTLikelihood::get_log_probability_derivative_f(

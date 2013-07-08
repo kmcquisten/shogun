@@ -26,7 +26,6 @@
 
 #ifdef HAVE_EIGEN3
 #include <shogun/mathematics/eigen3.h>
-#include <shogun/mathematics/eigen3.cpp>
 using namespace Eigen;
 #endif //HAVE_EIGEN3
 
@@ -1688,6 +1687,22 @@ float64_t CStatistics::inverse_incomplete_gamma_completed(float64_t a,
 float64_t CStatistics::normal_cdf(float64_t x, float64_t std_dev)
 {
 	return 0.5*(error_function(x/std_dev/1.41421356237309504880)+1);
+}
+
+float64_t CStatistics::lnormal_cdf(float64_t x)
+{
+	float64_t result;
+
+	if (x<-10.0)
+	{
+		float64_t x2=x*x;
+		float64_t s=1.0-1.0/x2*(1.0-3.0/x2*(1.0-5.0/x2*(1.0-7.0/x2)));
+		result=-0.5*CMath::log(2*CMath::PI)-x2*0.5-CMath::log(-x)+CMath::log(s);
+	}
+	else
+		result=CMath::log(normal_cdf(x));
+
+	return result;
 }
 
 float64_t CStatistics::error_function(float64_t x)

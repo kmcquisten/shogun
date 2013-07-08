@@ -17,24 +17,26 @@ namespace shogun
 {
 class CTokenizer;
 
-/** @brief The class CDelimiterTokenizer is used to tokenize 
+/** @brief The class CDelimiterTokenizer is used to tokenize
  *  a SGVector<char> into tokens using custom chars as delimiters.
  *  One can set the delimiters to use by setting to 1 the appropriate
  *  index of the public field delimiters. Eg. to set as delimiter the
  *  character ':', one should do: tokenizer->delimiters[':'] = 1;
- *  Also, note that consecutive delimiters will be skipped.
  */
 class CDelimiterTokenizer: public CTokenizer
 {
 public:
-    /* default constructor */
-    CDelimiterTokenizer();
+	/** default constructor 
+	 *
+	 * @param skip_delimiters whether to skip consecutive delimiters or not
+	 */
+	CDelimiterTokenizer(bool skip_delimiters = false);
 
-    /* copy constructor */
-    CDelimiterTokenizer(const CDelimiterTokenizer& orig);
+	/* copy constructor */
+	CDelimiterTokenizer(const CDelimiterTokenizer& orig);
 
-    /* destructor */
-    virtual ~CDelimiterTokenizer() {}
+	/* destructor */
+	virtual ~CDelimiterTokenizer() {}
 
 	/** Set the char array that requires tokenization
 	 *
@@ -42,7 +44,7 @@ public:
 	 */
 	virtual void set_text(SGVector<char> txt);
 
-	/** Returns true or false based on whether 
+	/** Returns true or false based on whether
 	 * there exists another token in the text
 	 *
 	 * @return if another token exists
@@ -51,6 +53,8 @@ public:
 
 	/** Method that returns the indices, start and end, of
 	 *  the next token in line.
+	 *  If next_token starts with a delimiter and skip_consecutive_delimiters is false,
+	 *  it returns the same indices for start and end.
 	 *
 	 * @param start token's starting index
 	 * @return token's ending index (exclusive)
@@ -62,22 +66,43 @@ public:
 	 *
 	 *  @return name of the SGSerializable
 	 */
-    virtual const char* get_name() const;
+	virtual const char* get_name() const;
 
-	/** Makes the tokenizer to use ' ' or '\t' 
+	/** Makes the tokenizer to use ' ' or '\t'
 	 *  as the delimiters for the tokenization process;
 	 */
 	void init_for_whitespace();
+
+	CDelimiterTokenizer* get_copy();
+
+	/** Resets the delimiters */
+	void clear_delimiters();
+
+	/** Get skip_consecutive_delimiters
+	 *
+	 * @return if skip consecutive delimiters is set
+	 */
+	bool get_skip_delimiters() const;
+	
+	/** set value for skip_consecutive_delimiters
+	 *
+	 * @param skip_delimiters whether to skip or not consecutive delimiters
+	 */
+	void set_skip_delimiters(bool skip_delimiters);
+
 private:
 	void init();
 
 public:
 	/* delimiters */
-	bool delimiters[256];
+	SGVector<bool> delimiters;
 
 protected:
 	/* index of last token */
 	index_t last_idx;
+
+	/** whether to skip consecutive delimiters or not */
+	bool skip_consecutive_delimiters;
 };
 }
 #endif	/* _WHITESPACETOKENIZER__H__ */

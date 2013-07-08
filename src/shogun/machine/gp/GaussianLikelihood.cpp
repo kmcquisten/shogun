@@ -53,16 +53,16 @@ CGaussianLikelihood* CGaussianLikelihood::obtain_from_generic(CLikelihoodModel* 
 	return (CGaussianLikelihood*)lik;
 }
 
-SGVector<float64_t> CGaussianLikelihood::evaluate_means(
-		SGVector<float64_t>& means)
+SGVector<float64_t> CGaussianLikelihood::evaluate_means(SGVector<float64_t> mu,
+		SGVector<float64_t> s2)
 {
-	return SGVector<float64_t>(means);
+	return SGVector<float64_t>(mu);
 }
 
-SGVector<float64_t> CGaussianLikelihood::evaluate_variances(
-		SGVector<float64_t>& vars)
+SGVector<float64_t> CGaussianLikelihood::evaluate_variances(SGVector<float64_t> mu,
+		SGVector<float64_t> s2)
 {
-	SGVector<float64_t> result(vars);
+	SGVector<float64_t> result(s2);
 	Map<VectorXd> eigen_result(result.vector, result.vlen);
 
 	eigen_result+=CMath::sq(m_sigma)*VectorXd::Ones(result.vlen);
@@ -70,7 +70,7 @@ SGVector<float64_t> CGaussianLikelihood::evaluate_variances(
 	return result;
 }
 
-float64_t CGaussianLikelihood::get_log_probability_f(CLabels* lab,
+SGVector<float64_t> CGaussianLikelihood::get_log_probability_f(CLabels* lab,
 		SGVector<float64_t> func)
 {
 	REQUIRE(lab->get_label_type()==LT_REGRESSION,
@@ -89,7 +89,7 @@ float64_t CGaussianLikelihood::get_log_probability_f(CLabels* lab,
 	eigen_result=-eigen_result.cwiseProduct(eigen_result)/(2*CMath::sq(m_sigma))-
 		VectorXd::Ones(result.vlen)*log(2*CMath::PI*CMath::sq(m_sigma))/2.0;
 
-	return eigen_result.sum();
+	return result;
 }
 
 SGVector<float64_t> CGaussianLikelihood::get_log_probability_derivative_f(
