@@ -5,42 +5,42 @@
  * (at your option) any later version.
  *
  * Written (W) 2013 Roman Votyakov
- * Copyright (C) 2012 Jacob Walker
- * Copyright (C) 2013 Roman Votyakov
  */
 
-#ifndef CLIKELIHOODMODEL_H_
-#define CLIKELIHOODMODEL_H_
+#ifndef _PROBITLIKELIHOOD_H_
+#define _PROBITLIKELIHOOD_H_
 
-#include <shogun/base/SGObject.h>
-#include <shogun/labels/Labels.h>
+#include <shogun/lib/config.h>
+
+#ifdef HAVE_EIGEN3
+
+#include <shogun/machine/gp/LikelihoodModel.h>
 
 namespace shogun
 {
 
-/** type of likelihood model */
-enum ELikelihoodModelType
-{
-	LT_NONE = 0,
-	LT_GAUSSIAN = 10,
-	LT_STUDENTST = 20,
-	LT_LOGIT = 30,
-	LT_PROBIT = 40
-};
-
-/** @brief The Likelihood model base class.
+/** @brief Class that models Probit likelihood.
  *
- * The Likelihood model computes approximately the distribution
- * \f$p(y|f)\f$, where \f$y\f$ are the labels, and \f$f\f$ is the
- * prediction function.
+ * \f[
+ * p(y|f) = \prod_{i=1}^n normal_cdf(y_i * f_i)
+ * \f]
+ *
+ * where \f$\text{normal_cdf}(z)\f$ - cumulative distribution function
+ * (CDF) of the normal distribution \f$N(0, 1)\f$.
  */
-class CLikelihoodModel : public CSGObject
+class CProbitLikelihood : public CLikelihoodModel
 {
 public:
-	/** constructor */
-	CLikelihoodModel();
+	/** default constructor */
+	CProbitLikelihood();
 
-	virtual ~CLikelihoodModel();
+	virtual ~CProbitLikelihood();
+
+	/** returns the name of the likelihood model
+	 *
+	 * @return name ProbitLikelihood
+	 */
+	virtual const char* get_name() const { return "ProbitLikelihood"; }
 
 	/** returns the logarithm of the predictive density of \f$y_*\f$:
 	 *
@@ -66,13 +66,13 @@ public:
 	 * @param s2 posterior variance of a Gaussian distribution
 	 * \f$N(\mu,\sigma^2)\f$, which is an approximation to the
 	 * posterior marginal \f$p(f_*|X,y,x_*)\f$
-	 * @param lab labels \f$y_*\f$. NOTE: if lab equals to NULL, then
-	 * each \f$y_*\f$ equals to one.
+	 * @param lab labels \f$y_*\f$. NOTE: if lab equals to NULL, then each
+	 * \f$y_*\f$ equals to one.
 	 *
 	 * @return \f$log(p(y_*|X, y, x*))\f$ for each label \f$y_*\f$
 	 */
 	virtual SGVector<float64_t> evaluate_log_probabilities(SGVector<float64_t> mu,
-			SGVector<float64_t> s2, CLabels* lab=NULL)=0;
+			SGVector<float64_t> s2, CLabels* lab=NULL);
 
 	/** returns mean of the predictive marginal \f$p(y_*|X,y,x_*)\f$
 	 *
@@ -89,7 +89,7 @@ public:
 	 * @return final means evaluated by likelihood function
 	 */
 	virtual SGVector<float64_t> evaluate_means(SGVector<float64_t> mu,
-			SGVector<float64_t> s2, CLabels* lab=NULL)=0;
+			SGVector<float64_t> s2, CLabels* lab=NULL);
 
 	/** returns variance of the predictive marginal
 	 * \f$p(y_*|X,y,x_*)\f$
@@ -107,13 +107,13 @@ public:
 	 * @return final variances evaluated by likelihood function
 	 */
 	virtual SGVector<float64_t> evaluate_variances(SGVector<float64_t> mu,
-			SGVector<float64_t> s2, CLabels* lab=NULL)=0;
+			SGVector<float64_t> s2, CLabels* lab=NULL);
 
 	/** get model type
-	  *
-	  * @return model type NONE
+	 *
+	 * @return model type PROBIT
 	 */
-	virtual ELikelihoodModelType get_model_type() { return LT_NONE; }
+	virtual ELikelihoodModelType get_model_type() { return LT_PROBIT; }
 
 	/** returns the logarithm of the point-wise likelihood
 	 * \f$log(p(y_i|f_i))\f$ for each label \f$y_i\f$.
@@ -127,10 +127,10 @@ public:
 	 * @return logarithm of the point-wise likelihood
 	 */
 	virtual SGVector<float64_t> get_log_probability_f(CLabels* lab,
-			SGVector<float64_t> func)=0;
+			SGVector<float64_t> func);
 
-	/** get derivative of log likelihood \f$log(p(y|f))\f$ with
-	 * respect to location function \f$f\f$
+	/** get derivative of log likelihood \f$log(P(y|f))\f$ with
+	 * respect to function location \f$f\f$
 	 *
 	 * @param lab labels used
 	 * @param func function location
@@ -140,9 +140,9 @@ public:
 	 * @return derivative
 	 */
 	virtual SGVector<float64_t> get_log_probability_derivative_f(
-			CLabels* lab, SGVector<float64_t> func, index_t i)=0;
+			CLabels* lab, SGVector<float64_t> func, index_t i);
 
-	/** get derivative of log likelihood \f$log(p(y|f))\f$ with
+	/** get derivative of log likelihood \f$log(P(y|f))\f$ with
 	 * respect to given parameter
 	 *
 	 * @param lab labels used
@@ -154,11 +154,11 @@ public:
 	 * @return derivative
 	 */
 	virtual SGVector<float64_t> get_first_derivative(CLabels* lab,
-			TParameter* param, CSGObject* obj, SGVector<float64_t> func)=0;
+			TParameter* param, CSGObject* obj, SGVector<float64_t> func);
 
 	/** get derivative of the first derivative of log likelihood with
 	 * respect to function location, i.e. \f$\frac{\partial
-	 * log(p(y|f))}{\partial f}\f$ with respect to given parameter
+	 * log(P(y|f))}{\partial f}\f$ with respect to given parameter
 	 *
 	 * @param lab labels used
 	 * @param param parameter
@@ -169,11 +169,11 @@ public:
 	 * @return derivative
 	 */
 	virtual SGVector<float64_t> get_second_derivative(CLabels* lab,
-			TParameter* param, CSGObject* obj, SGVector<float64_t> func)=0;
+			TParameter* param, CSGObject* obj, SGVector<float64_t> func);
 
 	/** get derivative of the second derivative of log likelihood with
 	 * respect to function location, i.e. \f$\frac{\partial^{2}
-	 * log(p(y|f))}{\partial f^{2}}\f$ with respect to given parameter
+	 * log(P(y|f))}{\partial f^{2}}\f$ with respect to given parameter
 	 *
 	 * @param lab labels used
 	 * @param param parameter
@@ -184,27 +184,16 @@ public:
 	 * @return derivative
 	 */
 	virtual SGVector<float64_t> get_third_derivative(CLabels* lab,
-			TParameter* param, CSGObject* obj, SGVector<float64_t> func)=0;
+			TParameter* param, CSGObject* obj, SGVector<float64_t> func);
 
-	/** return whether likelihood function supports regression
-	 *
-	 * @return false
-	 */
-	virtual bool supports_regression() { return false; }
-
-	/** return whether likelihood function supports binary
+	/** return whether logit likelihood function supports binary
 	 * classification
 	 *
-	 * @return false
+	 * @return true
 	 */
-	virtual bool supports_binary() { return false; }
+	virtual bool supports_binary() { return true; }
 
-	/** return whether likelihood function supports multiclass
-	 * classification
-	 *
-	 * @return false
-	 */
-	virtual bool supports_multiclass() { return false; }
 };
 }
-#endif /* CLIKELIHOODMODEL_H_ */
+#endif /* HAVE_EIGEN3 */
+#endif /* _PROBITLIKELIHOOD_H_ */
