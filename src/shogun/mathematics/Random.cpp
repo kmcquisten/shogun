@@ -10,11 +10,14 @@
 
 #include <shogun/mathematics/Random.h>
 #include <shogun/base/Parameter.h>
+#include <shogun/lib/external/SFMT/SFMT.h>
+#include <shogun/lib/external/dSFMT/dSFMT.h>
+#include <shogun/lib/Time.h>
 
 using namespace shogun;
 
 CRandom::CRandom()
- : m_seed(12345),
+ : m_seed((uint32_t)CTime::get_curtime()*100),
  m_sfmt_32(NULL),
  m_sfmt_64(NULL),
  m_dsfmt(NULL)
@@ -291,3 +294,18 @@ float64_t CRandom::GaussianPdfDenormInv(float64_t y) const
     // in the context of this class.
     return CMath::sqrt(-2.0 * CMath::log(y));
 }
+
+void CRandom::reinit(uint32_t seed)
+{
+#ifdef HAVE_PTHREAD
+	PTHREAD_LOCK(&m_state_lock);
+#endif
+	m_seed = seed;
+	sfmt_init_gen_rand(m_sfmt_32, m_seed);
+	sfmt_init_gen_rand(m_sfmt_64, m_seed);
+	dsfmt_init_gen_rand(m_dsfmt, m_seed);
+#ifdef HAVE_PTHREAD
+	PTHREAD_UNLOCK(&m_state_lock);
+#endif
+}
+
